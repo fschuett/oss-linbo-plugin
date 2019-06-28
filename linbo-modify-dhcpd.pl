@@ -11,7 +11,10 @@ my $device_id;
 my $tool;
 my %host;
 my $operation = $0;
-my $USE_DB = '1';
+$operation =~ s/.*linbo-([a-zA-Z]+)-dhcpd.pl$/$1/;
+my $USE_DB = '0';
+my $LOGFILE = '/root/linbo-'.$operation.'-dhcpd.pl.log';
+my $DEBUG = '0';
 
 sub get_bootfilename($)
 {
@@ -53,7 +56,8 @@ sub write_file($$) {
   close F;
 }
 
-$operation =~ s/.*linbo-([a-zA-Z]+)-dhcpd.pl$/$1/;
+open(LOG,">>$LOGFILE") if $DEBUG;
+print LOG "=============================\n" if $DEBUG;
 
 while(<STDIN>){
     chomp;
@@ -62,6 +66,7 @@ while(<STDIN>){
     $name =~ s/^\s+|\s+$//g;
     $value =~ s/^\s+|\s+$//g;
     $host{$name} = $value;
+    print LOG "INPUT: $name = $value\n" if $DEBUG;
 }
 
 if( not defined $host{'hwconf'} or not defined $host{'hwconfId'} or not defined $host{'name'} ){
@@ -71,16 +76,18 @@ if( not defined $host{'hwconf'} or not defined $host{'hwconfId'} or not defined 
 # Linbo host ?
 $tool = '';
 my $str = `/usr/sbin/oss_api_text.sh GET clonetool/$host{'hwconfId'}/partitions`;
+print LOG "partitions: $str\n" if $DEBUG;
 my @a = split / /,$str;
 for my $p (@a){
     $result = `/usr/sbin/oss_api_text.sh GET clonetool/$host{'hwconfId'}/$p/ITOOL`;
+    print LOG "partition: $p tool: $result\n" if $DEBUG;
     if( $result eq 'Linbo' ){
         $tool = $result;
         last;
     }
 }
 
-if( not $tool eq 'Linbo' ){
+if( $tool ne 'Linbo' and $operation ne 'modify' ){
     exit(0);
 }
 
@@ -96,24 +103,38 @@ my $bootfile = get_bootfilename($host{'hwconf'});
 
 if( $operation eq 'modify' or $operation eq 'delete' ){
     $result = `/usr/sbin/oss_api.sh GET devices/$device_id/dhcp`;
+    print LOG "old dhcp entries: $result\n" if $DEBUG;
     $result  = eval { decode_json($result) };
     for my $entry (@{$result}){
         my $r = `/usr/sbin/oss_api.sh DELETE devices/$device_id/dhcp/$entry->{'id'}`;
     }
-    `/usr/sbin/oss_api.sh PUT devices/refreshConfig` if $operation eq 'delete';
+    `/usr/sbin/oss_api.sh PUT devices/refreshConfig` if $operation eq 'delete' or $tool ne 'Linbo';
     print "old dhcp entries for $host{'name'} deleted.\n";
 }
 
-if( $operation eq 'add' or $operation eq 'modify' ){
+if( $tool ne 'Linbo' ){
+    exit(0);
+}
+
+if( $operation eq 'add' or $operation eq 'modify'){
     my $file = `mktemp /tmp/linbo_write_dhcpdXXXX.txt`;
-    my $dhcppath = {"objectType" => "Device", "objectId" => $device_id, "keyword" => "dhcpStatements", "value" => "option extensions-path \"$host{'hwconf'}\""};
-    my $dhcpboot = {"objectType" => "Device", "objectId" => $device_id, "keyword" => "dhcpStatements", "value" => "filename \"$bootfile\""};
+    my $dhcppath;
+    my $dhcpboot;
+    if( $USE_DB ){
+        $dhcppath = {"objectType" => "Device", "objectId" => $device_id, "keyword" => "dhcpStatements", "value" => "option extensions-path \\\"$host{'hwconf'}\\\""};
+        $dhcpboot = {"objectType" => "Device", "objectId" => $device_id, "keyword" => "dhcpStatements", "value" => "filename \\\"$bootfile\\\""};
+    } else {
+        $dhcppath = {"objectType" => "Device", "objectId" => $device_id, "keyword" => "dhcpStatements", "value" => "option extensions-path \"$host{'hwconf'}\""};
+        $dhcpboot = {"objectType" => "Device", "objectId" => $device_id, "keyword" => "dhcpStatements", "value" => "filename \"$bootfile\""};
+    }
     write_file("$file", encode_json($dhcppath));
     if( $USE_DB eq '1' ){
         `echo "INSERT INTO OSSMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcppath->{value}',1);" |mysql OSS`;
+        print LOG "INSERT INTO OSSMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcppath->{value}',1);\n" if $DEBUG;
         $result = "OK";
     } else {
         $result = `/usr/sbin/oss_api_post_file.sh devices/$device_id/dhcp $file\n`;
+        print LOG "ADD dhcppath: $result\n" if $DEBUG;
         $result = eval { decode_json($result) };
         if ($@) {
             die( "decode_json failed, invalid json. error:$@\n" );
@@ -123,9 +144,11 @@ if( $operation eq 'add' or $operation eq 'modify' ){
     write_file("$file", encode_json($dhcpboot));
     if( $USE_DB eq '1' ){
         `echo "INSERT INTO OSSMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcpboot->{value}',1);" |mysql OSS`;
+        print LOG "INSERT INTO OSSMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcpboot->{value}',1);\n" if $DEBUG;
         $result = "OK";
     } else {
         $result = `/usr/sbin/oss_api_post_file.sh devices/$device_id/dhcp $file\n`;
+        print LOG "ADD dhcpboot: $result\n" if $DEBUG;
         $result = eval { decode_json($result) };
         if ($@) {
             die( "decode_json failed, invalid json. error:$@\n" );
@@ -135,5 +158,6 @@ if( $operation eq 'add' or $operation eq 'modify' ){
     `/usr/sbin/oss_api.sh PUT devices/refreshConfig` if $USE_DB eq '1';
     `rm -f $file`;
     print "new dhcp entries for $host{'name'} created.\n";
+    close(LOG) if $DEBUG;
 }
 
