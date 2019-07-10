@@ -14,7 +14,7 @@ my $operation = $0;
 $operation =~ s/.*linbo-([a-zA-Z]+)-dhcpd.pl$/$1/;
 my $USE_DB = '0';
 my $LOGFILE = '/root/linbo-'.$operation.'-dhcpd.pl.log';
-my $DEBUG = '0';
+my $DEBUG = '1';
 
 sub get_bootfilename($)
 {
@@ -69,17 +69,17 @@ while(<STDIN>){
     print LOG "INPUT: $name = $value\n" if $DEBUG;
 }
 
-if( not defined $host{'hwconf'} or not defined $host{'hwconfId'} or not defined $host{'name'} ){
+if( not defined $host{'hwconf'} or not defined $host{'hwconfid'} or not defined $host{'name'} ){
     exit(0);
 }
 
 # Linbo host ?
 $tool = '';
-my $str = `/usr/sbin/oss_api_text.sh GET clonetool/$host{'hwconfId'}/partitions`;
+my $str = `/usr/sbin/oss_api_text.sh GET clonetool/$host{'hwconfid'}/partitions`;
 print LOG "partitions: $str\n" if $DEBUG;
 my @a = split / /,$str;
 for my $p (@a){
-    $result = `/usr/sbin/oss_api_text.sh GET clonetool/$host{'hwconfId'}/$p/ITOOL`;
+    $result = `/usr/sbin/oss_api_text.sh GET clonetool/$host{'hwconfid'}/$p/ITOOL`;
     print LOG "partition: $p tool: $result\n" if $DEBUG;
     if( $result eq 'Linbo' ){
         $tool = $result;
