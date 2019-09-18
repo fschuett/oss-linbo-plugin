@@ -34,7 +34,9 @@ sub hash_to_json($) {
     foreach my $key ( keys %{$hash} ) {
 	my $value = $hash->{$key};
         $json .= '"'.$key.'":';
-	if( $value eq 'true' ) {
+	if( not defined $value ) {
+        $json .= 'null,';
+	} elsif( $value eq 'true' ) {
        $json .= 'true,';
 	} elsif ( $value eq 'false' ) {
        $json .= 'false,';
@@ -153,11 +155,7 @@ if( scalar(@toadd) ){
 		# create device
 		my $room_id = $rooms{$host->{'room'}}{'id'};
 		if(not defined $room_id){
-			close_on_error("Host cannot be added to non existing room: ".Data::Dumper($host)."\n");
-		}
-		my $room_id = $rooms{$host->{'room'}}{'id'};
-		if(not defined $room_id){
-				close_on_error("Host cannot be added to non existing room: ".Data::Dumper($host)."\n");
+			close_on_error("Host cannot be added to non existing room: ".Dumper($host)."\n");
 		}
 		$result = `/usr/sbin/oss_api.sh GET rooms/$room_id/availableIPAddresses`;
 		$result = eval { decode_json($result) };
@@ -166,7 +164,7 @@ if( scalar(@toadd) ){
 				close_on_error( "decode_json failed, invalid json. error:$@\n" );
 		}
 		if(not scalar(@{$result})){
-				close_on_error("Host room has no free IP adresses: ".Data::Dumper($host)."\n");
+				close_on_error("Host room has no free IP adresses: ".Dumper($host)."\n");
 		}
 		$host->{IP} = shift @{$result};
 		$result = `/usr/sbin/oss_api.sh PUT clonetool/rooms/$room_id/$host->{'MAC'}/$host->{'IP'}/$host->{'name'}`;
@@ -176,7 +174,7 @@ if( scalar(@toadd) ){
 				close_on_error( "decode_json failed, invalid json. error:$@\n" );
 		}
 		if ($result->{'code'} ne "OK") {
-				close_on_error( "adding of host failed. error: $result->{'value'}\n".Data::Dumper($host)."\n" );
+				close_on_error( "adding of host failed. error: $result->{'value'}\n".Dumper($host)."\n" );
 		}
 		$result = `/usr/sbin/oss_api.sh GET devices/byIP/$host->{'IP'}`;
 		$result = eval { decode_json($result) };
@@ -201,8 +199,10 @@ if( scalar(@toadd) ){
 		}
 		if( $result->{"code"} eq "OK" )
 		{
-			print "  new hosts $host->{name}\n";
-		}
+			print "  new host: $host->{name}\n";
+		} else {
+            print "  modification of host $host->{name} failed: $result->{'message'}\n";
+        }
 		# add workstation user
 		my %user = ();
 		$user{'givenName'}  = $host->{'name'};
