@@ -51,68 +51,13 @@ sub hash_to_json($) {
     $json .= '}';
 }
 
-sub write_file($$) {
-  my $file = shift;
-  my $out  = shift;
-  local *F;
-  open F, ">$file" || die "Couldn't open file '$file' for writing: $!; aborting";
-  binmode F, ':encoding(utf8)';
-  local $/ unless wantarray;
-  print F $out;
-  close F;
-}
-
-sub create_user($) {
-    my $user  = shift;
-    my $uid = $user->{'uid'};
-    my $file = `mktemp /tmp/XXXXXXXX`;
-    write_file("$file", hash_to_json($user));
-    print "/usr/sbin/oss_api_post_file.sh users/add $file\n";
-    my $result = `/usr/sbin/oss_api_post_file.sh users/add $file`;
-    $result = eval { decode_json($result) };
-    sleep(3);
-    if ($@) {
-        close_on_error( "decode_json failed, invalid json. error:$@\n" );
-    }
-    if( $result->{"code"} eq "OK" ) {
-        print $result->{'value'}."\n";
-    }
-}
-
 if( $> )
 {
     die "Only root may start this programm!\n";
 }
 
 my @toadd = ();
-my %hwconfs = ();
 my %osshosts = ();
-my %rooms = ();
-
-print "Reading Rooms...\n";
-$result = `/usr/sbin/oss_api.sh GET rooms/all`;
-$result = eval { decode_json($result) };
-if ($@)
-{
-    close_on_error( "decode_json failed, invalid json. error:$@\n" );
-}
-foreach my $r (@{$result}) {
-	$rooms{$r->{'name'}} = $r;
-}
-
-print "Reading HWConfs...\n";
-$result = `/usr/sbin/oss_api.sh GET clonetool/all`;
-$result = eval { decode_json($result) };
-if ($@)
-{
-    close_on_error( "decode_json failed, invalid json. error:$@\n" );
-}
-
-foreach my $hwconf (@{$result}){
-	next if $hwconf->{'deviceType'} ne 'FatClient';
-	next if not defined $hwconf->{'name'} or not defined $hwconf->{'id'};
-	$hwconfs{$hwconf->{'name'}} = $hwconf->{'id'};
-}
 
 print "Reading Devices...\n";
 $result = `/usr/sbin/oss_api.sh GET devices/all`;
@@ -133,11 +78,15 @@ while(<WORKSTATIONS>){
         next;
     }
     my ( $raum, $rechner, $gruppe, $mac, $ip, $r1, $r2, $r3, $r4, $r5, $pxe ) = split /;/;
+    my $owner = $rechner;
+    $owner =~ s/^cpq//;
+    $owner =~ s/^lap//;
+    $owner = "" if $owner eq $rechner;
     my %temp = (
 			room => "$raum",
             name => "$rechner",
+            owner => "$owner",
             hwconf => "$gruppe",
-            hwconf_id => $hwconfs{$gruppe},
             MAC => "$mac",
             IP => "$ip",
             r1 => "$r1", r2 => "$r2", r3 => "$r3", r4 => "$r4", r5 => "$r5",
@@ -150,70 +99,25 @@ while(<WORKSTATIONS>){
 close(WORKSTATIONS);
 
 if( scalar(@toadd) ){
-	print scalar(@toadd)." hosts will be added to the system.\n";
+	print scalar(@toadd)." host(s) will be added to the system.\n";
+	$tempfile = "/tmp/import_hosts.csv.$date";
+	open(IMPORTFILE, ">$tempfile");
+	print IMPORTFILE "Room;MAC;HWConf;Owner;Name\n";
 	for my $host (@toadd) {
-		# create device
-		my $room_id = $rooms{$host->{'room'}}{'id'};
-		if(not defined $room_id){
-			close_on_error("Host cannot be added to non existing room: ".Dumper($host)."\n");
-		}
-		$result = `/usr/sbin/oss_api.sh GET rooms/$room_id/availableIPAddresses`;
-		$result = eval { decode_json($result) };
-		if ($@)
-		{
-				close_on_error( "decode_json failed, invalid json. error:$@\n" );
-		}
-		if(not scalar(@{$result})){
-				close_on_error("Host room has no free IP adresses: ".Dumper($host)."\n");
-		}
-		$host->{IP} = shift @{$result};
-		$result = `/usr/sbin/oss_api.sh PUT clonetool/rooms/$room_id/$host->{'MAC'}/$host->{'IP'}/$host->{'name'}`;
-		$result = eval { decode_json($result) };
-		if ($@)
-		{
-				close_on_error( "decode_json failed, invalid json. error:$@\n" );
-		}
-		if ($result->{'code'} ne "OK") {
-				close_on_error( "adding of host failed. error: $result->{'value'}\n".Dumper($host)."\n" );
-		}
-		$result = `/usr/sbin/oss_api.sh GET devices/byIP/$host->{'IP'}`;
-		$result = eval { decode_json($result) };
-		if ($@)
-		{
-				close_on_error( "decode_json failed, invalid json. error:$@\n" );
-		}
-		# update data to include room and hwconf
-		$result->{'hwconfId'} = $host->{'hwconf_id'};
-		$result->{'roomId'} = $room_id;
-		$result->{'inventary'} = '' if not defined $result->{'inventary'};
-		$result->{'serial'} = '' if not defined $result->{'serial'};
-		$result->{'locality'} = '' if not defined $result->{'locality'};
-		$result->{'counter'} = 0 if not defined $result->{'counter'};
-		$tempfile = "/tmp/modify_host.$host->{'name'}";
-		write_file($tempfile, hash_to_json($result));
-		$result = `/usr/sbin/oss_api_post_file.sh devices/modify $tempfile`;
-		$result = eval { decode_json($result) };
-		if ($@)
-		{
-			close_on_error( "decode_json failed, invalid json. error:$@\n" );
-		}
-		if( $result->{"code"} eq "OK" )
-		{
-			print "  new host: $host->{name}\n";
-		} else {
-            print "  modification of host $host->{name} failed: $result->{'message'}\n";
-        }
-		# add workstation user
-		my %user = ();
-		$user{'givenName'}  = $host->{'name'};
-		$user{'surName'}    = 'Workstation-User';
-		$user{'birthDay'}   = $date;
-		$user{'password'}   = $host->{'name'};
-		$user{'uid'}        = $host->{'name'};
-		$user{'role'}       = 'workstations';
-		$user{'fsQuota'}    = '0';
-		$user{'msQuota'}    = '0';
-		create_user(\%user);
+		print IMPORTFILE "$host->{'room'};$host->{'MAC'};$host->{'hwconf'};$host->{'owner'};$host->{'name'}\n";
+	}
+	close(IMPORTFILE);
+	$result = `/usr/sbin/oss_api_upload_file.sh devices/import $tempfile`;
+	$result = eval { decode_json($result) };
+	if ($@)
+	{
+		close_on_error( "decode_json failed, invalid json. error:$@\n" );
+	}
+	if( $result->{"code"} eq "OK" )
+	{
+		print "  new hosts added\n";
+	} else {
+		print "  modification of hosts failed: $result->{'value'}\n";
 	}
 } else {
 	print "No new hosts to import.\n";
