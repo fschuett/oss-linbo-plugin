@@ -16,7 +16,7 @@ use POSIX qw(strftime);
 
 # Global variable
 my $date = strftime "%Y-%m-%d", localtime;
-my $config       = "/etc/sysconfig/schoolserver";
+my $config       = "/etc/sysconfig/cranix";
 my $tempfile     = 0;
 my $result       = 0;
 
