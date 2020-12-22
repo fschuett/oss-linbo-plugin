@@ -38,12 +38,12 @@ while(<WORKSTATIONS>){
     print TEMP "$_\n";
 }
 if( not $found and defined $host{'name'} and defined $host{'hwconf'} and defined $host{'mac'} and defined $host{'ip'} ){
-    my $result = `/usr/sbin/oss_api.sh get devices/byName/$host{'name'}`;
+    my $result = `/usr/sbin/crx_api.sh get devices/byName/$host{'name'}`;
     $result = eval { decode_json($result) };
     if ($@){
         print "decode_json failed, invalid json. error:$@\n";
     } else {
-        $result = `/usr/sbin/oss_api.sh get rooms/$result->{'roomId'}`;
+        $result = `/usr/sbin/crx_api.sh get rooms/$result->{'roomId'}`;
         $result = eval { decode_json($result) };
         if ($@){
             print "decode_json failed, invalid json. error:$@\n";

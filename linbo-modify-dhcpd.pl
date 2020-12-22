@@ -75,11 +75,11 @@ if( not defined $host{'hwconf'} or not defined $host{'hwconfid'} or not defined 
 
 # Linbo host ?
 $tool = '';
-my $str = `/usr/sbin/oss_api_text.sh GET clonetool/$host{'hwconfid'}/partitions`;
+my $str = `/usr/sbin/crx_api_text.sh GET clonetool/$host{'hwconfid'}/partitions`;
 print LOG "partitions: $str\n" if $DEBUG;
 my @a = split / /,$str;
 for my $p (@a){
-    $result = `/usr/sbin/oss_api_text.sh GET clonetool/$host{'hwconfid'}/$p/ITOOL`;
+    $result = `/usr/sbin/crx_api_text.sh GET clonetool/$host{'hwconfid'}/$p/ITOOL`;
     print LOG "partition: $p tool: $result\n" if $DEBUG;
     if( $result eq 'Linbo' ){
         $tool = $result;
@@ -92,7 +92,7 @@ if( $tool ne 'Linbo' and $operation ne 'modify' ){
 }
 
 # Device id?
-$result = `/usr/sbin/oss_api.sh GET devices/byName/$host{'name'}`;
+$result = `/usr/sbin/crx_api.sh GET devices/byName/$host{'name'}`;
 $result = eval { decode_json($result) };
 if ($@) {
     die( "decode_json failed, invalid json. error:$@\n" );
@@ -102,13 +102,13 @@ $device_id = $result->{'id'};
 my $bootfile = get_bootfilename($host{'hwconf'});
 
 if( $operation eq 'modify' or $operation eq 'delete' ){
-    $result = `/usr/sbin/oss_api.sh GET devices/$device_id/dhcp`;
+    $result = `/usr/sbin/crx_api.sh GET devices/$device_id/dhcp`;
     print LOG "old dhcp entries: $result\n" if $DEBUG;
     $result  = eval { decode_json($result) };
     for my $entry (@{$result}){
-        my $r = `/usr/sbin/oss_api.sh DELETE devices/$device_id/dhcp/$entry->{'id'}`;
+        my $r = `/usr/sbin/crx_api.sh DELETE devices/$device_id/dhcp/$entry->{'id'}`;
     }
-    `/usr/sbin/oss_api.sh PUT devices/refreshConfig` if $operation eq 'delete' or $tool ne 'Linbo';
+    `/usr/sbin/crx_api.sh PUT devices/refreshConfig` if $operation eq 'delete' or $tool ne 'Linbo';
     print "old dhcp entries for $host{'name'} deleted.\n";
 }
 
@@ -133,7 +133,7 @@ if( $operation eq 'add' or $operation eq 'modify'){
         print LOG "INSERT INTO OSSMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcppath->{value}',1);\n" if $DEBUG;
         $result = "OK";
     } else {
-        $result = `/usr/sbin/oss_api_post_file.sh devices/$device_id/dhcp $file\n`;
+        $result = `/usr/sbin/crx_api_post_file.sh devices/$device_id/dhcp $file\n`;
         print LOG "ADD dhcppath: $result\n" if $DEBUG;
         $result = eval { decode_json($result) };
         if ($@) {
@@ -147,7 +147,7 @@ if( $operation eq 'add' or $operation eq 'modify'){
         print LOG "INSERT INTO OSSMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcpboot->{value}',1);\n" if $DEBUG;
         $result = "OK";
     } else {
-        $result = `/usr/sbin/oss_api_post_file.sh devices/$device_id/dhcp $file\n`;
+        $result = `/usr/sbin/crx_api_post_file.sh devices/$device_id/dhcp $file\n`;
         print LOG "ADD dhcpboot: $result\n" if $DEBUG;
         $result = eval { decode_json($result) };
         if ($@) {
@@ -155,7 +155,7 @@ if( $operation eq 'add' or $operation eq 'modify'){
         }
         $result = "OK" if $result->{"code"} eq "OK";
     }
-    `/usr/sbin/oss_api.sh PUT devices/refreshConfig` if $USE_DB eq '1';
+    `/usr/sbin/crx_api.sh PUT devices/refreshConfig` if $USE_DB eq '1';
     `rm -f $file`;
     print "new dhcp entries for $host{'name'} created.\n";
     close(LOG) if $DEBUG;

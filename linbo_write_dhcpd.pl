@@ -147,6 +147,6 @@ for (@to_modify) {
 	`echo "UPDATE OSSMConfig SET value='$value' WHERE id=$id;" |mysql OSS`;
 }
 
-print "oss_api.sh PUT devices/refreshConfig...";
-`/usr/sbin/oss_api.sh PUT devices/refreshConfig`;
+print "crx_api.sh PUT devices/refreshConfig...";
+`/usr/sbin/crx_api.sh PUT devices/refreshConfig`;
 print "\n";

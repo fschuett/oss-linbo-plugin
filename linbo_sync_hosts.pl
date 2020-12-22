@@ -60,7 +60,7 @@ my @toadd = ();
 my %osshosts = ();
 
 print "Reading Devices...\n";
-$result = `/usr/sbin/oss_api.sh GET devices/all`;
+$result = `/usr/sbin/crx_api.sh GET devices/all`;
 $result = eval { decode_json($result) };
 if ($@)
 {
@@ -107,7 +107,7 @@ if( scalar(@toadd) ){
 		print IMPORTFILE "$host->{'room'};$host->{'MAC'};$host->{'hwconf'};$host->{'owner'};$host->{'name'}\n";
 	}
 	close(IMPORTFILE);
-	$result = `/usr/sbin/oss_api_upload_file.sh devices/import $tempfile`;
+	$result = `/usr/sbin/crx_api_upload_file.sh devices/import $tempfile`;
 	$result = eval { decode_json($result) };
 	if ($@)
 	{
