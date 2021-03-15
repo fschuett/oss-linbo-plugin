@@ -83,8 +83,8 @@ echo "Done." | tee -a $TMPLOG
 # restart cranix-api service
 systemctl restart cranix-api|tee -a $TMPLOG
 
-# restart samba service
-systemctl restart samba| tee -a $TMPLOG
+# restart samba-ad service
+systemctl restart samba-ad| tee -a $TMPLOG
 
 # running user scripts
 echo | tee -a $TMPLOG
