@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# 2017-2018 Copyright Frank Schütte <fschuett@gymhim.de>
+# 2017-2021 Copyright Frank Schütte <fschuett@gymhim.de>
 # sync hosts with workstations file
 # add missing hosts
 #

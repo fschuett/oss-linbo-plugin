@@ -6,12 +6,12 @@
 #
 # for oss-linbo
 # Frank Schütte <fschuett@gymhim.de>
-# 17.03.2017
+# 15.03.2021
 # GPL v3
 #
 if [ "$1" = "--help" -o  "$1" = "-h" ]
 then
-	echo 'Usage: /usr/share/oss/tools/import_workstations [OPTION]'
+	echo 'Usage: /usr/sbin/import_workstations [OPTION]'
 	echo 'With this script we import all registered linbo hosts to OSS.'
 	echo
 	echo 'Options :'
@@ -80,8 +80,8 @@ echo "Writing dhcpd.conf file..." | tee -a $TMPLOG
 $LINBOSHAREDIR/linbo_write_dhcpd.pl | tee -a $TMPLOG
 echo "Done." | tee -a $TMPLOG
 
-# restart oss-api service
-systemctl restart oss-api|tee -a $TMPLOG
+# restart cranix-api service
+systemctl restart cranix-api|tee -a $TMPLOG
 
 # restart samba service
 systemctl restart samba| tee -a $TMPLOG
