@@ -105,8 +105,8 @@ echo "#####################################################################" | t
 
 if [ $RC -ne 0 ]; then
 	echo | tee -a $TMPLOG
-	echo "Finished with error(s)! Please look at $LOGFILE! Detailed output will be mailed to admin!" | tee -a $TMPLOG
-	cat $TMPLOG | mail -s "import_workstations finished with error(s)!" admin@localhost
+	echo "Finished with error(s)! Please look at $LOGFILE! Detailed output will be mailed to administrator!" | tee -a $TMPLOG
+	cat $TMPLOG | mail -s "import_workstations finished with error(s)!" administrator
 fi
 
 # append log
