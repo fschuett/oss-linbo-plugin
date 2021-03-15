@@ -44,7 +44,7 @@ while (my $file = readdir(DIR)) {
 }
 
 # read all rooms from OSS
-open(OSS,'echo "SELECT r.name,d.name,d.id, hw.name,d.MAC,d.IP FROM Devices d JOIN Rooms r ON d.room_id=r.id JOIN HWConfs hw ON d.hwconf_id=hw.id WHERE d.MAC != \"\" ORDER BY d.IP;" | mysql -N OSS |');
+open(OSS,'echo "SELECT r.name,d.name,d.id, hw.name,d.MAC,d.IP FROM Devices d JOIN Rooms r ON d.room_id=r.id JOIN HWConfs hw ON d.hwconf_id=hw.id WHERE d.MAC != \"\" ORDER BY d.IP;" | mysql -N CRX |');
 while(<OSS>){
         chomp;
         my ( $raum, $rechner, $id, $gruppe, $mac, $ip ) = split /\t/;
@@ -64,7 +64,7 @@ close(OSS);
 
 my %dhcpStatements = ();
 # read all dhcp statements from OSS
-open(OSS,"echo \"SELECT omc.id, omc.objectId, omc.value FROM OSSMConfig omc JOIN Devices d ON omc.objectId=d.id WHERE omc.objectType='Device' AND omc.keyword='dhcpStatements';\" |mysql -N OSS |");
+open(OSS,"echo \"SELECT omc.id, omc.objectId, omc.value FROM CrxMConfig omc JOIN Devices d ON omc.objectId=d.id WHERE omc.objectType='Device' AND omc.keyword='dhcpStatements';\" |mysql -N CRX |");
 while(<OSS>){
 	chomp;
 	my ( $entry_id, $device_id, $value ) = split /\t/;
@@ -127,24 +127,24 @@ close(WORKSTATIONS);
 # commit changes to OSS database and refreshConfig
 print "Alte Einträge werden gelöscht...\n";
 for my $entry (@to_delete) {
-	print "\tDELETE FROM OSSMConfig WHERE id=$entry;\n";
-	`echo "DELETE FROM OSSMConfig WHERE id=$entry;" |mysql OSS`;
+	print "\tDELETE FROM CrxMConfig WHERE id=$entry;\n";
+	`echo "DELETE FROM CrxMConfig WHERE id=$entry;" |mysql CRX`;
 }
 print "Neue Einträge werden hinzugefügt...\n";
 for (@to_add) {
 	my ($id, $value) = split /:/;
 	next if(not defined $id or not defined $value);
 	$value =~ s/"/\\"/g;
-	print "\tINSERT INTO OSSMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$id,'dhcpStatements','$value',1);\n";
-	`echo "INSERT INTO OSSMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$id,'dhcpStatements','$value',1);" |mysql OSS`;
+	print "\tINSERT INTO CrxMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$id,'dhcpStatements','$value',1);\n";
+	`echo "INSERT INTO CrxMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$id,'dhcpStatements','$value',1);" |mysql CRX`;
 }
 print "Veränderte Einträge werden korrigiert...\n";
 for (@to_modify) {
 	my ($id, $value) = split /:/;
 	next if(not defined $id or not defined $value);
 	$value =~ s/"/\\"/g;
-	print "\tUPDATE OSSMConfig SET value='$value' WHERE id=$id;\n";
-	`echo "UPDATE OSSMConfig SET value='$value' WHERE id=$id;" |mysql OSS`;
+	print "\tUPDATE CrxMConfig SET value='$value' WHERE id=$id;\n";
+	`echo "UPDATE CrxMConfig SET value='$value' WHERE id=$id;" |mysql CRX`;
 }
 
 print "crx_api.sh PUT devices/refreshConfig...";

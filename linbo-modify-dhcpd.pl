@@ -129,8 +129,8 @@ if( $operation eq 'add' or $operation eq 'modify'){
     }
     write_file("$file", encode_json($dhcppath));
     if( $USE_DB eq '1' ){
-        `echo "INSERT INTO OSSMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcppath->{value}',1);" |mysql OSS`;
-        print LOG "INSERT INTO OSSMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcppath->{value}',1);\n" if $DEBUG;
+        `echo "INSERT INTO CrxMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcppath->{value}',1);" |mysql CRX`;
+        print LOG "INSERT INTO CrxMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcppath->{value}',1);\n" if $DEBUG;
         $result = "OK";
     } else {
         $result = `/usr/sbin/crx_api_post_file.sh devices/$device_id/dhcp $file\n`;
@@ -143,8 +143,8 @@ if( $operation eq 'add' or $operation eq 'modify'){
     }
     write_file("$file", encode_json($dhcpboot));
     if( $USE_DB eq '1' ){
-        `echo "INSERT INTO OSSMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcpboot->{value}',1);" |mysql OSS`;
-        print LOG "INSERT INTO OSSMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcpboot->{value}',1);\n" if $DEBUG;
+        `echo "INSERT INTO CrxMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcpboot->{value}',1);" |mysql CRX`;
+        print LOG "INSERT INTO CrxMConfig(objectType,objectId,keyword,value,creator_id) VALUES('Device',$device_id,'dhcpStatements','$dhcpboot->{value}',1);\n" if $DEBUG;
         $result = "OK";
     } else {
         $result = `/usr/sbin/crx_api_post_file.sh devices/$device_id/dhcp $file\n`;

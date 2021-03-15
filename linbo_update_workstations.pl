@@ -46,7 +46,7 @@ if( -e "/etc/linbo/workstations"){
 	print "/etc/linbo/workstations is empty...\n";
 }
 
-open(OSS,'echo "SELECT r.name,d.name,hw.name,d.MAC,d.IP FROM Devices d JOIN Rooms r ON d.room_id=r.id JOIN HWConfs hw ON d.hwconf_id=hw.id ORDER BY d.name;" | mysql -N OSS |');
+open(OSS,'echo "SELECT r.name,d.name,hw.name,d.MAC,d.IP FROM Devices d JOIN Rooms r ON d.room_id=r.id JOIN HWConfs hw ON d.hwconf_id=hw.id ORDER BY d.name;" | mysql -N CRX |');
 while(<OSS>){
         chomp;
         my ( $raum, $rechner, $gruppe, $mac, $ip ) = split /\t/;
