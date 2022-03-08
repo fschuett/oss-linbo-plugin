@@ -113,11 +113,11 @@ if( scalar(@toadd) ){
 	{
 		close_on_error( "decode_json failed, invalid json. error:$@\n" );
 	}
-	if( $result->{"code"} eq "OK" )
+	if( $result[0]->{"code"} eq "OK" )
 	{
 		print "  new hosts added\n";
 	} else {
-		print "  modification of hosts failed: $result->{'value'}\n";
+		print "  modification of hosts failed: $result[0]->{'value'}\n";
 	}
 } else {
 	print "No new hosts to import.\n";
